@@ -139,8 +139,3 @@ animal_classification_model/
 ## Contributing
 
 Feel free to open issues or submit pull requests with improvements.
-
-## License
-
-MIT License
-
