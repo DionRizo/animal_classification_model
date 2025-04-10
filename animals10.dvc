@@ -1,0 +1,6 @@
+outs:
+- md5: b7d8efeaeb59b39f692cdbbb893551d9.dir
+  size: 1228705042
+  nfiles: 52359
+  hash: md5
+  path: animals10

@@ -1,0 +1,5 @@
+outs:
+- md5: 715023e825d40b59b3a6f590dc468fc2
+  size: 10795758
+  hash: md5
+  path: model_scripted_mobilenet_lr0.001_augmedium.pt

@@ -1,0 +1,5 @@
+outs:
+- md5: c936b0f2454d08eefa794ad9695c6a2a
+  size: 18174013
+  hash: md5
+  path: model_scripted_efficientnet_lr0.001_aughigh.pt

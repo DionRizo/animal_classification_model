@@ -1,0 +1,5 @@
+outs:
+- md5: c6949852a7447fedb45d4778d6a6c1ea
+  size: 86015265
+  hash: md5
+  path: model_scripted_resnet34_lr0.001_augmedium.pt

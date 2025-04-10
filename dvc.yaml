@@ -1,0 +1,27 @@
+stages:
+  prepare_data:
+    desc: Prepare and preprocess raw animal images
+    cmd: python scripts/prepare_data.py
+    deps:
+    - data/raw
+    outs:
+    - data/processed
+  train_model:
+    desc: Train the animal classification model
+    cmd: python animal_classification_model_training.py
+    deps:
+    - data/processed
+    params:
+    - training
+    outs:
+    - models/animal_classifier.pt
+    metrics:
+    - metrics/training_metrics.json
+  evaluate_model:
+    desc: Evaluate the animal classification model
+    cmd: python scripts/evaluate_model.py
+    deps:
+    - data/processed/test
+    - models/animal_classifier.pt
+    metrics:
+    - metrics/evaluation_metrics.json

@@ -1,0 +1,9 @@
+torch
+torchvision
+numpy
+flask>=2.0.0
+pillow>=9.0.0
+requests>=2.0.0
+scikit-learn
+matplotlib
+pandas

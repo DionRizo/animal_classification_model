@@ -1,0 +1,5 @@
+outs:
+- md5: 0929dc66d0114a2fc30880a11caed5ea
+  size: 45439246
+  hash: md5
+  path: model_scripted_resnet18_lr0.0001_aughigh.pt
