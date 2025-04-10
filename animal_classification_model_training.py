@@ -174,8 +174,7 @@ def prepare_data_loaders(data_path, batch_size=32, augmentation_level='medium'):
             full_dataset, [train_size, val_size]
         )
         
-        # Apply different transforms to validation set
-        # Apply different transforms to validation set
+        
         val_dataset.dataset.transform = val_transforms
     
     
@@ -279,7 +278,7 @@ def train_model(model, train_loader, val_loader, learning_rate=0.001, epochs=15,
             mlflow.log_metric("train_acc", epoch_train_acc, step=epoch)
             mlflow.log_metric("val_acc", epoch_val_acc, step=epoch)
             
-            # Update learning rate
+            # Ajustar la tasa de aprendizaje
             scheduler.step(epoch_val_loss)
             
             # Guardar historial ANTES de verificar early stopping
@@ -311,6 +310,8 @@ def train_model(model, train_loader, val_loader, learning_rate=0.001, epochs=15,
             if epoch_val_acc >= accuracy_threshold:
                 print(f"Reached accuracy threshold of {accuracy_threshold:.2%}! Stopping training.")
                 break
+
+
         # Registrar precisión final
         final_accuracy = history['val_acc'][-1]
         mlflow.log_metric("final_accuracy", final_accuracy)
@@ -330,11 +331,11 @@ def train_model(model, train_loader, val_loader, learning_rate=0.001, epochs=15,
         else:
             print(f"❌ Model did not reach target accuracy: {final_accuracy:.2%} (target: 80%)")
 
-        # Check if we hit the early accuracy threshold during training
+        # Verificar si se alcanzó el objetivo de precisión
         if max(history['val_acc']) >= accuracy_threshold:
             print(f"✓ Training stopped early with validation accuracy of {max(history['val_acc']):.2%}")
         
-        # Load best model weights
+        # Cargar los pesos del mejor modelo
         model.load_state_dict(best_model_weights)
         
         return model, history, final_accuracy
@@ -369,22 +370,18 @@ def plot_training_history(history, experiment_name):
 
 def save_model_for_inference(model, class_names, experiment_name, final_accuracy):
     """Guardar el modelo para su uso en inferencia si cumple el umbral de precisión"""
-    # Save model
     if final_accuracy >= 0.8:
-        # Move model to CPU for saving (ensures compatibility)
         model = model.to('cpu')
         
-        # Save the model in TorchScript format for deployment
+        # Guardar el modelo para inferencia
         model.eval()
         example = torch.rand(1, 3, IMG_SIZE, IMG_SIZE)
     
         traced_script_module = torch.jit.trace(model, example)
         
-        # Save model with experiment name
+        # Guardar el modelo como un archivo TorchScript
         script_module_path = f"model_scripted_{experiment_name}.pt"
         traced_script_module.save(script_module_path)
-        
-        # Move back to original device
         model = model.to(device)
         return script_module_path
     else:
@@ -394,19 +391,15 @@ def save_model_for_inference(model, class_names, experiment_name, final_accuracy
 def run_experiment(experiment_variant, learning_rate, augmentation_level, patience):
     """Ejecutar un experimento con los parámetros especificados"""
     try:
-        # Set up experiment tracking
         experiment_name = f"{experiment_variant}_lr{learning_rate}_aug{augmentation_level}"
         print(f"\n{'='*20} Running experiment: {experiment_name} {'='*20}\n")
         print(f"\n{'='*20} Ejecutando experimento: {experiment_name} {'='*20}\n")
-        # Prepare data loaders
         train_loader, val_loader, class_names = prepare_data_loaders(
             DATASET_PATH, BATCH_SIZE, augmentation_level=augmentation_level
         )
         
-        # Create model
-        model, model_name = create_model(len(class_names), experiment_variant)
         
-        # Train model
+        model, model_name = create_model(len(class_names), experiment_variant)
         trained_model, history, final_accuracy = train_model(
             model, train_loader, val_loader, 
             learning_rate=learning_rate,
@@ -416,7 +409,7 @@ def run_experiment(experiment_variant, learning_rate, augmentation_level, patien
             accuracy_threshold=0.82  # Lower threshold but still above 80% requirement
         )
         
-        # Save model
+        
         # Guardar modelo
             script_path = save_model_for_inference(trained_model, class_names, experiment_name, final_accuracy)
             if script_path:
@@ -442,14 +435,14 @@ def main():
     else:
         print("Usando solo CPU - el entrenamiento será más lento")
     
-    # Set up MLflow tracking
+    
     mlflow.set_tracking_uri("file:./mlruns")
     mlflow.set_experiment("animal_classification")
     
-    # Define experiments
+    # Definir los experimentos a realizar
     experiments = [
-        # Format: (model_variant, learning_rate, augmentation_level, patience)
-        ("resnet18", 0.001, "medium", 2),  # Reduced patience to 2
+        # Formato: (model_variant, learning_rate, augmentation_level, patience)
+        ("resnet18", 0.001, "medium", 2),  
         ("resnet34", 0.001, "medium", 2),
         ("mobilenet", 0.001, "medium", 2),
         ("resnet18", 0.0001, "high", 2),
@@ -457,7 +450,7 @@ def main():
         ("efficientnet", 0.001, "high", 2),
     ]
     
-    # Run experiments
+    # Ejecutar los experimentos
     results = []
     for i, (model_variant, lr, aug_level, patience) in enumerate(experiments):
         print(f"\nEjecutando experimento {i+1}/{len(experiments)}")
@@ -471,7 +464,7 @@ def main():
             "accuracy": accuracy
         })
     
-    # Print summary
+    # Mostrar resultados finales
     print("\n===== RESULTADOS DE EXPERIMENTOS =====")
     for res in results:
         print(f"Experimento {res['experiment']}: {res['model']} - Precisión: {res['accuracy']:.4f}")
