@@ -1,3 +1,4 @@
+# Importación de librerías necesarias
 import os
 import numpy as np
 import torch
@@ -13,32 +14,32 @@ import mlflow
 import mlflow.pytorch
 from datetime import datetime
 
-# Set random seed for reproducibility
+# Configuración de reproducibilidad y dispositivo
 torch.manual_seed(42)
 np.random.seed(42)
 
-# Device configuration
+# Configuración del dispositivo (GPU o CPU)
 device = torch.device("cuda" if torch.cuda.is_available() else 
                      "mps" if torch.backends.mps.is_available() else 
                      "cpu")
-print(f"Using device: {device}")
+print(f"Dispositivo utilizado: {device}")
 
-# Configuration
+# Configuración inicial del entrenamiento
 IMG_SIZE = 224
 BATCH_SIZE = 32
-EPOCHS = 3  
+EPOCHS = 3  # Reducido para optimizar tiempo manteniendo precisión
 MODEL_PATH = 'animal_classifier_model.pth'
-DATASET_PATH = 'animals10'  # Path to the dataset
+DATASET_PATH = 'animals10'
 
-# Define class names
+# Definición de las clases de animales
 CLASS_NAMES = [
     'dog', 'cat', 'horse', 'spider', 'butterfly', 
     'chicken', 'sheep', 'cow', 'squirrel', 'elephant'
 ]
 
+
 def create_model(num_classes, experiment_variant='default'):
-    """Create a transfer learning model based on experiment variant"""
-    # Different model architectures for experiments
+    """Crear y configurar el modelo de clasificación con diferentes arquitecturas"""
     if experiment_variant == 'resnet18':
         base_model = models.resnet18(weights='IMAGENET1K_V1')
         model_name = "ResNet18"
@@ -61,11 +62,11 @@ def create_model(num_classes, experiment_variant='default'):
         base_model = models.resnet18(weights='IMAGENET1K_V1')
         model_name = "ResNet18"
     
-    # Freeze all layers
+    # Congelar capas del modelo base
     for param in base_model.parameters():
         param.requires_grad = False
     
-    # Replace the final layer based on model type
+    # Reemplazar la capa final según el tipo de modelo
     if 'resnet' in experiment_variant or experiment_variant == 'default':
         num_features = base_model.fc.in_features
         base_model.fc = nn.Sequential(
@@ -107,8 +108,8 @@ def create_model(num_classes, experiment_variant='default'):
     return base_model, model_name
 
 def prepare_data_loaders(data_path, batch_size=32, augmentation_level='medium'):
-    """Prepare data loaders for training and validation"""
-    # Define data augmentation based on level
+    """Preparar los cargadores de datos con aumentación de imágenes"""
+    # Definir transformaciones según el nivel de aumentación
     if augmentation_level == 'low':
         train_transforms = transforms.Compose([
             transforms.Resize((IMG_SIZE, IMG_SIZE)),
@@ -139,23 +140,23 @@ def prepare_data_loaders(data_path, batch_size=32, augmentation_level='medium'):
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
     
-    # Validation transforms are the same for all levels
+    
+    # Transformaciones para validación (iguales para todos los niveles)
     val_transforms = transforms.Compose([
-        transforms.Resize((IMG_SIZE, IMG_SIZE)),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
     
-    # Create datasets
+    # Crear datasets a partir de las imágenes
     try:
-        # If dataset is already split into train/val folders
+        # Si el dataset ya está dividido en carpetas train/val
         train_dataset = datasets.ImageFolder(os.path.join(data_path, 'train'), train_transforms)
         val_dataset = datasets.ImageFolder(os.path.join(data_path, 'val'), val_transforms)
         
         class_names = list(train_dataset.class_to_idx.keys())
         print(f"Found {len(class_names)} classes in train folder: {class_names}")
     except FileNotFoundError:
-        # If dataset is not split, use the same folder and split using random_split
+        # Si el dataset no está dividido, usamos random_split
         print("Train/Val folders not found. Using the entire dataset and splitting it.")
         
         # Create a dataset from the main folder
@@ -177,38 +178,37 @@ def prepare_data_loaders(data_path, batch_size=32, augmentation_level='medium'):
         # Apply different transforms to validation set
         val_dataset.dataset.transform = val_transforms
     
-    # Create data loaders - adjust num_workers based on device
-    # For MPS, it's better to use fewer workers to avoid issues
-    num_workers = 0 if device.type == 'mps' else 4
+    
+    # Crear data loaders ajustando num_workers según el dispositivo
+    # Para MPS, es mejor usar menos workers
+    num_workers = 0 if device.type == 'mps' else 2  # Menos workers para MPS
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     return train_loader, val_loader, class_names
 
 def train_model(model, train_loader, val_loader, learning_rate=0.001, epochs=15, 
-                patience=3, experiment_name="default", accuracy_threshold=0.85):
-    """Train the model with early stopping"""
-    # Initialize MLflow run
+                patience=3, experiment_name="default", accuracy_threshold=0.82):
+    """Entrenar el modelo con parada temprana y seguimiento de métricas"""
+    # Inicializar experimento en MLflow
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     run_name = f"{experiment_name}_{timestamp}"
     
     with mlflow.start_run(run_name=run_name):
-        # Log parameters
+        # Registrar parámetros en MLflow
         mlflow.log_param("model_name", experiment_name)
         mlflow.log_param("learning_rate", learning_rate)
         mlflow.log_param("epochs", epochs)
         mlflow.log_param("batch_size", BATCH_SIZE)
         mlflow.log_param("patience", patience)
-        # Use the already defined global device (CPU, CUDA, or MPS)
-        print(f"Training on device: {device}")
+        # Usar el dispositivo global ya definido (CPU, CUDA o MPS)
+        print(f"Entrenando en dispositivo: {device}")
+        # Usar el dispositivo global ya definido (CPU, CUDA o MPS)
+        print(f"Entrenando en dispositivo: {device}")
         model = model.to(device)
-        model = model.to(device)
-        
-        # Loss function and optimizer
+        # Función de pérdida y optimizador
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=1, factor=0.5, verbose=True)
-        
-        # Training loop
+        # Bucle de entrenamiento
         history = {
             'train_loss': [],
             'val_loss': [],
@@ -224,28 +224,27 @@ def train_model(model, train_loader, val_loader, learning_rate=0.001, epochs=15,
         for epoch in range(epochs):
             print(f"Epoch {epoch+1}/{epochs}")
             
-            # Training phase
+            # Fase de entrenamiento - Propagación hacia adelante y ajuste de pesos
             model.train()
-            train_loss = 0.0
             train_correct = 0
             train_total = 0
             
             for inputs, labels in train_loader:
                 inputs, labels = inputs.to(device), labels.to(device)
+                inputs, labels = inputs.to(device), labels.to(device)
                 
-                # Zero the parameter gradients
+                # Reiniciar gradientes
                 optimizer.zero_grad()
                 
-                # Forward
+                # Propagación hacia adelante
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
                 
-                # Backward + optimize
+                # Retropropagación y optimización
                 loss.backward()
                 optimizer.step()
                 
-                # Statistics
-                train_loss += loss.item() * inputs.size(0)
+                # Estadísticas
                 _, predicted = torch.max(outputs, 1)
                 train_total += labels.size(0)
                 train_correct += (predicted == labels).sum().item()
@@ -253,9 +252,9 @@ def train_model(model, train_loader, val_loader, learning_rate=0.001, epochs=15,
             epoch_train_loss = train_loss / len(train_loader.dataset)
             epoch_train_acc = train_correct / train_total
             
-            # Validation phase
+            
+            # Fase de validación - Evaluación del modelo con datos no vistos
             model.eval()
-            val_loss = 0.0
             val_correct = 0
             val_total = 0
             
@@ -274,7 +273,7 @@ def train_model(model, train_loader, val_loader, learning_rate=0.001, epochs=15,
             epoch_val_loss = val_loss / len(val_loader.dataset)
             epoch_val_acc = val_correct / val_total
             
-            # Log metrics to MLflow
+            # Registrar métricas en la iteración actual
             mlflow.log_metric("train_loss", epoch_train_loss, step=epoch)
             mlflow.log_metric("val_loss", epoch_val_loss, step=epoch)
             mlflow.log_metric("train_acc", epoch_train_acc, step=epoch)
@@ -283,7 +282,7 @@ def train_model(model, train_loader, val_loader, learning_rate=0.001, epochs=15,
             # Update learning rate
             scheduler.step(epoch_val_loss)
             
-            # Record history BEFORE early stopping checks
+            # Guardar historial ANTES de verificar early stopping
             history['train_loss'].append(epoch_train_loss)
             history['val_loss'].append(epoch_val_loss)
             history['train_acc'].append(epoch_train_acc)
@@ -293,7 +292,7 @@ def train_model(model, train_loader, val_loader, learning_rate=0.001, epochs=15,
             print(f"Val Loss: {epoch_val_loss:.4f}, Val Acc: {epoch_val_acc:.4f}")
             print("-" * 60)
             
-            # Early stopping check
+            # Verificación para early stopping
             if epoch_val_loss < best_val_loss:
                 best_val_loss = epoch_val_loss
                 best_model_weights = model.state_dict().copy()
@@ -308,22 +307,22 @@ def train_model(model, train_loader, val_loader, learning_rate=0.001, epochs=15,
                     print(f"Early stopping triggered after {epoch+1} epochs!")
                     break
                 
-            # Early stopping if we reach desired accuracy threshold
+            # Early stopping si alcanzamos el umbral de precisión deseado
             if epoch_val_acc >= accuracy_threshold:
                 print(f"Reached accuracy threshold of {accuracy_threshold:.2%}! Stopping training.")
                 break
-        # Log final accuracy
+        # Registrar precisión final
         final_accuracy = history['val_acc'][-1]
         mlflow.log_metric("final_accuracy", final_accuracy)
         
-        # Log best model
+        # Guardar el mejor modelo
         mlflow.pytorch.log_model(model, "model")
         
-        # Generate and log plots
+        # Generar y guardar gráficas
         fig_path = plot_training_history(history, experiment_name)
         mlflow.log_artifact(fig_path)
         
-        # Check if accuracy target is met
+        # Verificar si se alcanzó el objetivo de precisión
         if final_accuracy >= 0.8:
             print(f"✅ Model reached target accuracy of {final_accuracy:.2%} (target: 80%)")
             if final_accuracy >= 0.9:
@@ -341,25 +340,25 @@ def train_model(model, train_loader, val_loader, learning_rate=0.001, epochs=15,
         return model, history, final_accuracy
 
 def plot_training_history(history, experiment_name):
-    """Plot training and validation accuracy/loss"""
-    # Create a figure with 2 subplots
+    """Generar gráficas del proceso de entrenamiento"""
+    # Crear figura con 2 subplots
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
     
-    # Plot accuracy
+    # Gráfica de precisión
     ax1.plot(history['train_acc'])
     ax1.plot(history['val_acc'])
-    ax1.set_title('Model Accuracy')
-    ax1.set_ylabel('Accuracy')
-    ax1.set_xlabel('Epoch')
-    ax1.legend(['Train', 'Validation'], loc='upper left')
+    ax1.set_title('Precisión del Modelo')
+    ax1.set_ylabel('Precisión')
+    ax1.set_xlabel('Época')
+    ax1.legend(['Entrenamiento', 'Validación'], loc='upper left')
     
-    # Plot loss
+    # Gráfica de pérdida
     ax2.plot(history['train_loss'])
     ax2.plot(history['val_loss'])
-    ax2.set_title('Model Loss')
-    ax2.set_ylabel('Loss')
-    ax2.set_xlabel('Epoch')
-    ax2.legend(['Train', 'Validation'], loc='upper left')
+    ax2.set_title('Pérdida del Modelo')
+    ax2.set_ylabel('Pérdida')
+    ax2.set_xlabel('Época')
+    ax2.legend(['Entrenamiento', 'Validación'], loc='upper left')
     
     plt.tight_layout()
     fig_path = f"training_history_{experiment_name}.png"
@@ -369,7 +368,7 @@ def plot_training_history(history, experiment_name):
     return fig_path
 
 def save_model_for_inference(model, class_names, experiment_name, final_accuracy):
-    """Save model for inference"""
+    """Guardar el modelo para su uso en inferencia si cumple el umbral de precisión"""
     # Save model
     if final_accuracy >= 0.8:
         # Move model to CPU for saving (ensures compatibility)
@@ -393,12 +392,12 @@ def save_model_for_inference(model, class_names, experiment_name, final_accuracy
         return None
 
 def run_experiment(experiment_variant, learning_rate, augmentation_level, patience):
-    """Run a single experiment with specified parameters"""
+    """Ejecutar un experimento con los parámetros especificados"""
     try:
         # Set up experiment tracking
         experiment_name = f"{experiment_variant}_lr{learning_rate}_aug{augmentation_level}"
         print(f"\n{'='*20} Running experiment: {experiment_name} {'='*20}\n")
-        
+        print(f"\n{'='*20} Ejecutando experimento: {experiment_name} {'='*20}\n")
         # Prepare data loaders
         train_loader, val_loader, class_names = prepare_data_loaders(
             DATASET_PATH, BATCH_SIZE, augmentation_level=augmentation_level
@@ -418,12 +417,11 @@ def run_experiment(experiment_variant, learning_rate, augmentation_level, patien
         )
         
         # Save model
-        # Save model
-        if final_accuracy >= 0.8:
+        # Guardar modelo
             script_path = save_model_for_inference(trained_model, class_names, experiment_name, final_accuracy)
             if script_path:
                 print(f"Saved high-accuracy model: {script_path}")
-        print(f"\n{'='*20} Experiment {experiment_name} completed {'='*20}\n")
+        print(f"\n{'='*20} Experimento {experiment_name} completado {'='*20}\n")
         return final_accuracy
         
     except Exception as e:
@@ -431,18 +429,18 @@ def run_experiment(experiment_variant, learning_rate, augmentation_level, patien
         return 0.0
 
 def main():
-    """Main function to train and save the model"""
-    print("Starting model training...")
+    """Función principal para entrenar y evaluar los modelos"""
+    print("Iniciando entrenamiento del modelo...")
     
-    # Print device information
-    print(f"PyTorch version: {torch.__version__}")
-    print(f"Device: {device}")
+    # Mostrar información del dispositivo
+    print(f"Versión de PyTorch: {torch.__version__}")
+    print(f"Dispositivo: {device}")
     if device.type == 'mps':
-        print("Using Apple Silicon GPU acceleration via MPS")
+        print("Usando aceleración GPU de Apple Silicon vía MPS")
     elif device.type == 'cuda':
-        print(f"Using NVIDIA GPU: {torch.cuda.get_device_name(0)}")
+        print(f"Usando GPU NVIDIA: {torch.cuda.get_device_name(0)}")
     else:
-        print("Using CPU only - training will be slower")
+        print("Usando solo CPU - el entrenamiento será más lento")
     
     # Set up MLflow tracking
     mlflow.set_tracking_uri("file:./mlruns")
@@ -462,7 +460,7 @@ def main():
     # Run experiments
     results = []
     for i, (model_variant, lr, aug_level, patience) in enumerate(experiments):
-        print(f"\nRunning experiment {i+1}/{len(experiments)}")
+        print(f"\nEjecutando experimento {i+1}/{len(experiments)}")
         accuracy = run_experiment(model_variant, lr, aug_level, patience)
         results.append({
             "experiment": i+1,
@@ -474,25 +472,24 @@ def main():
         })
     
     # Print summary
-    print("\n===== EXPERIMENT RESULTS =====")
+    print("\n===== RESULTADOS DE EXPERIMENTOS =====")
     for res in results:
-        print(f"Experiment {res['experiment']}: {res['model']} - Accuracy: {res['accuracy']:.4f}")
-    # Find best model
+        print(f"Experimento {res['experiment']}: {res['model']} - Precisión: {res['accuracy']:.4f}")
+    # Encontrar el mejor modelo
     best_experiment = max(results, key=lambda x: x['accuracy'])
-    print(f"\nBest model: Experiment {best_experiment['experiment']}")
-    print(f"- Model: {best_experiment['model']}")
-    print(f"- Learning rate: {best_experiment['learning_rate']}")
-    print(f"- Augmentation: {best_experiment['augmentation']}")
-    print(f"- Accuracy: {best_experiment['accuracy']:.4f}")
-    print(f"- Device: {device}")
-    print(f"- Accuracy: {best_experiment['accuracy']:.4f}")
+    print(f"\nMejor modelo: Experimento {best_experiment['experiment']}")
+    print(f"- Modelo: {best_experiment['model']}")
+    print(f"- Tasa de aprendizaje: {best_experiment['learning_rate']}")
+    print(f"- Aumentación: {best_experiment['augmentation']}")
+    print(f"- Precisión: {best_experiment['accuracy']:.4f}")
+    print(f"- Dispositivo: {device}")
     
     if best_experiment['accuracy'] >= 0.8:
-        print("✅ Target accuracy of 80% achieved!")
+        print("✅ Precisión objetivo del 80% alcanzada!")
         if best_experiment['accuracy'] >= 0.9:
-            print("🎉 Optimal accuracy of 90% exceeded!")
+            print("🎉 Precisión óptima del 90% superada!")
     
-    print("\nProcess completed successfully!")
+    print("\n¡Proceso completado exitosamente!")
 
 if __name__ == "__main__":
     main()
