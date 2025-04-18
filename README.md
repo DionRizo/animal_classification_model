@@ -2,6 +2,10 @@
 
 A deep learning model for classifying animal images using PyTorch, with MLOps practices implemented using DVC and MLflow.
 
+## Front end Overview
+
+Check out the README under the "Front End" folder to install dependencies and run the website.
+
 ## Overview
 
 This project implements a transfer learning-based image classification model that can identify 10 different animal classes:
