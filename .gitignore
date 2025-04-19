@@ -56,3 +56,6 @@ model_scripted_*.pt
 /model_scripted_resnet18_lr0.001_augmedium.pt
 /model_scripted_resnet18_lr0.003_auglow.pt
 /model_scripted_resnet34_lr0.001_augmedium.pt
+
+node_modules
+package-lock.json
