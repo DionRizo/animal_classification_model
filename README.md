@@ -6,6 +6,82 @@ A deep learning model for classifying animal images using PyTorch, with MLOps pr
 
 Check out the README under the "Front End" folder to install dependencies and run the website.
 
+## Back end Overview
+
+Este proyecto también incluye un **servicio backend desarrollado con FastAPI** que permite realizar inferencias sobre imágenes utilizando el modelo entrenado. Este servicio expone un endpoint `/predict` que recibe una imagen y devuelve la clase animal correspondiente junto con la probabilidad de predicción.
+
+### Estructura general del Backend
+
+- `main.py`: archivo principal con FastAPI y el endpoint `/predict`.
+- `model_utils.py`: carga del modelo y lógica de inferencia.
+- `Dockerfile`: contenedor para desplegar el backend en cualquier entorno.
+- `requirements.txt`: dependencias necesarias para correr el backend.
+
+### Endpoint `/predict`
+
+- **Método**: POST
+- **Entrada**: imagen (`multipart/form-data`)
+- **Salida**: clase predicha y probabilidades
+
+Ejemplo de respuesta:
+```json
+{
+  "predicted_class": "Dog",
+  "confidence": 0.9468
+}
+```
+
+### Despliegue en AWS
+
+El backend fue desplegado en AWS utilizando **Docker** y una infraestructura definida completamente en **Terraform**. La arquitectura incluye:
+
+- EC2 para correr el contenedor del backend
+- Security Groups para controlar el tráfico entrante/saliente
+- IAM roles, VPC, subnets y Elastic IP
+- Autoaprovisionamiento con `user_data` para levantar el contenedor
+
+#### Fragmento ejemplo del Terraform (infraestructura de backend):
+```hcl
+resource "aws_instance" "backend" {
+  ami           = "ami-xxxxxxxx"
+  instance_type = "t2.micro"
+  key_name      = "my-key"
+
+  user_data = <<-EOF
+              #!/bin/bash
+              sudo apt update -y
+              sudo apt install docker.io -y
+              docker run -d -p 80:8000 my-backend-image
+              EOF
+
+  vpc_security_group_ids = [aws_security_group.allow_http.id]
+
+  tags = {
+    Name = "animal-classification-backend"
+  }
+}
+
+resource "aws_security_group" "allow_http" {
+  name        = "allow_http"
+  description = "Allow HTTP traffic"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+```
+
 ## Overview
 
 This project implements a transfer learning-based image classification model that can identify 10 different animal classes:
@@ -190,4 +266,3 @@ dvc remote list
 ```
 
 2. Ensure you have access to the remote storage.
-
