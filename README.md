@@ -140,6 +140,54 @@ animal_classification_model/
 - Multiple architecture testing
 - Automated model selection
 
-## Contributing
+## Model Testing and Inference
 
-Feel free to open issues or submit pull requests with improvements.
+This repository includes a testing script that allows you to visually test the trained models with your own images.
+
+### Using the Test Script
+
+1. Make sure you've pulled the model files using DVC:
+```bash
+dvc pull model_scripted_efficientnet_lr0.001_aughigh.pt.dvc
+```
+
+2. Run the test script with an image path:
+```bash
+python test_model.py path/to/your/animal/image.jpg
+```
+
+3. View the results:
+   - Terminal output shows prediction probabilities
+   - A visualization window displays:
+     - The input image
+     - A bar chart of top predictions
+   - The visualization is also saved as a PNG file
+
+### Test Script Features
+
+- Supports different model architectures (specify with `--model` flag)
+- Displays prediction confidence for all classes
+- Creates an intuitive visualization of results
+- Automatically detects images from the training dataset
+
+### Example
+
+```bash
+# Test with EfficientNet model (default)
+python test_model.py animals10/raw-img/gatto/1.jpeg
+
+# Test with a different model
+python test_model.py animals10/raw-img/farfalla/3.jpeg --model model_scripted_resnet18_lr0.003_auglow.pt
+```
+
+### Troubleshooting DVC Issues
+
+If you're having trouble with DVC pulling the models:
+
+1. Check your DVC remote configuration:
+```bash
+dvc remote list
+```
+
+2. Ensure you have access to the remote storage.
+
