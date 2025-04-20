@@ -191,10 +191,3 @@ dvc remote list
 
 2. Ensure you have access to the remote storage.
 
-3. If DVC is not working, you can directly obtain the model files from a team member and place them in the project root.
-
-4. Alternative option: If your partners can't pull the models using DVC but have access to this repository, they can directly use the model files (ensure the .gitignore is updated to include these files).
-
-## Contributing
-
-Feel free to open issues or submit pull requests with improvements.
