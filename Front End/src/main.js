@@ -5,6 +5,7 @@ import Home from './views/Home.vue'
 import Login from './views/Login.vue'
 import History from './views/History.vue'
 import About from './views/About.vue'
+import SingUp from './views/SignUp.vue'
 import store from './store'
 import './assets/main.css'
 
@@ -12,6 +13,7 @@ const routes = [
   { path: '/', component: Home, meta: { requiresAuth: true } },
   { path: '/login', component: Login },
   { path: '/history', component: History, meta: { requiresAuth: true } },
+  { path: '/signup', component: SingUp },
   { path: '/about', component: About }
 ]
 
